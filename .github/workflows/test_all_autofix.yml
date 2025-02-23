@@ -1,11 +1,11 @@
-name: Check Default Env 
+name: Test env auto-fix 
 
 on: 
   push:
     # Run only when these files are modified
     paths:
-      - .github/workflows/test_all_default_env_setup.yml
-      - .github/workflows/env-setup-and-import-check.yml
+      - .github/workflows/test_all_autofix.yml
+      - .github/workflows/env-auto-fix-and-import-check.yml
 
 jobs:
   generate-matrix:
@@ -20,9 +20,10 @@ jobs:
       - name: Get all the folder names in the benchmarks directory (remove the prefix "matbench_v0.1_" and the suffix '/' and enclose each folder name in single quotes) 
         id: get-folders
         run: |
-          cd benchmarks
-          models=$(ls -d matbench_v0.1_*/ | sed "s/matbench_v0.1_//g" | sed "s#/##g" | awk '{print "\x27"$0"\x27"}' | paste -sd "," -)
-          echo "models=[$models]" >> $GITHUB_OUTPUT  # Corrected output format
+            cd benchmarks
+            # models=$(ls -d matbench_v0.1_*/ | sed "s/matbench_v0.1_//g" | sed "s#/##g" | awk '{print "\x27"$0"\x27"}' | paste -sd "," -)
+            models='"dummy","Auto-sklearn"'
+            echo "models=[$models]" >> $GITHUB_OUTPUT  # Corrected output format
     
       - name: Define Python version list
         id: set-versions

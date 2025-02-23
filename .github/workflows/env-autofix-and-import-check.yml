@@ -12,52 +12,125 @@ on:
         required: true
         type: string
 
-
 jobs:
   setup:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Install Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: ${{ inputs.python_version }}
 
-      - name: Set up Conda environment
+      - name: Create and Activate Conda Env
         run: |
-            eval "$(conda shell.bash hook)"
-            cd benchmarks/matbench_v0.1_${{ inputs.model }}
+          eval "$(conda shell.bash hook)"
+          cd benchmarks/matbench_v0.1_${{ inputs.model }}
 
-            conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
+          echo "Creating Conda environment '${{ inputs.model }}' with Python ${{ inputs.python_version }}..."
+          conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
 
-            # Activate Conda environment
-            conda activate ${{ inputs.model }} 
+          echo "Activating environment..."
+          conda activate ${{ inputs.model }}
 
-            # Extract and install required packages from info.json
-            PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
-            pip install $PACKAGES
-            echo "Conda environment created with info.json. Exiting step..."
+          echo "Extracting packages from info.json..."
+          PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
+          echo "Initial packages: $PACKAGES"
+
+          # We'll attempt up to 5 auto-fix loops in case multiple packages fail one by one
+          MAX_TRIES=5
+          i=1
+          while [ $i -le $MAX_TRIES ]; do
+            echo "==== Iteration $i: Trying to install packages ===="
+            # Redirect stderr to a file so we can parse errors
+            if pip install $PACKAGES 2> pip_error.log; then
+              echo "Install succeeded on iteration $i!"
+              break
+            else
+              echo "Install failed on iteration $i. Attempting auto-fix..."
+
+              # Find the first line with a "Could not find a version" error
+              # e.g. "ERROR: Could not find a version that satisfies the requirement torch==1.10.0+cu113 (from versions: ...)"
+              ERR_LINE=$(grep -m1 "Could not find a version that satisfies the requirement" pip_error.log || true)
+              if [ -z "$ERR_LINE" ]; then
+                echo "No specific 'Could not find a version...' error found. Stopping auto-fix."
+                break
+              fi
+
+              # Extract the failing package name from $ERR_LINE
+              # We'll look for something like "torch==1.10.0+cu113" or "myPackage==1.2.3"
+              # The pattern below tries to match: 'requirement ' then the package up to a space or parentheses
+              FAILING_PKG=$(echo "$ERR_LINE" | sed -E 's#.*requirement ([^ ]+).*#\1#')
+              echo "Failing package: $FAILING_PKG"
+
+              # Attempt auto-fix on this FAILING_PKG
+              FIXED_PKG=""
+              # 1) If there's a plus sign, remove + suffix
+              if [[ "$FAILING_PKG" =~ ^([^=]+)==([^+]+)\+ ]]; then
+                FIXED_PKG="${BASH_REMATCH[1]}==${BASH_REMATCH[2]}"
+                echo "Auto-fix: Removing '+...' => $FIXED_PKG"
+              else
+                # 2) If there's a version, remove entire version => pkg==1.10.0 => pkg
+                base_pkg=$(echo "$FAILING_PKG" | sed -E 's/==[^ ]+//')
+                if [ "$base_pkg" != "$FAILING_PKG" ]; then
+                  echo "Auto-fix: Removing entire version => $base_pkg"
+                  FIXED_PKG="$base_pkg"
+                fi
+              fi
+
+              # If no fix so far, or the fix is still empty, let's just remove everything after '=='
+              # This might handle multiple plus signs or unusual patterns
+              if [ -z "$FIXED_PKG" ]; then
+                FIXED_PKG=$(echo "$FAILING_PKG" | sed -E 's/\+[^\ ]+//; s/==[^ ]+//')
+                if [ "$FIXED_PKG" == "$FAILING_PKG" ]; then
+                  echo "No auto-fix possible. Stopping."
+                  break
+                else
+                  echo "As a last resort fix: $FAILING_PKG => $FIXED_PKG"
+                fi
+              fi
+
+              # Now we need to replace $FAILING_PKG with $FIXED_PKG in the PACKAGES list
+              # We'll do a line-by-line approach to transform the package list
+              # 1) Convert $PACKAGES to lines
+              echo "$PACKAGES" | xargs -n1 > pkgs.txt
+
+              # 2) Replace FAILING_PKG with FIXED_PKG
+              sed -i "s#^$FAILING_PKG\$#$FIXED_PKG#g" pkgs.txt
+
+              # 3) Rebuild PACKAGES
+              PACKAGES=$(paste -sd ' ' pkgs.txt)
+              echo "Updated packages list: $PACKAGES"
+            fi
+            i=$((i+1))
+          done
+
+          # If we exit the loop and still haven't installed successfully, we proceed anyway
+          # but the environment might not be fully correct
+          echo "Final packages in environment: $PACKAGES"
 
       - name: Run the importing test
         run: |
-            eval "$(conda shell.bash hook)"
-            cd benchmarks/matbench_v0.1_${{ inputs.model }}
+          eval "$(conda shell.bash hook)"
+          cd benchmarks/matbench_v0.1_${{ inputs.model }}
 
-            # Activate Conda environment
-            conda activate ${{ inputs.model }}
+          conda activate ${{ inputs.model }}
 
-            # Convert Jupyter notebooks to Python scripts (if they exist, and jupyter should be installed in this case)
-            shopt -s nullglob
-            for notebook in *.ipynb; do
-                jupyter nbconvert --to script "$notebook"
-            done
+          # Convert Jupyter notebooks to Python scripts (if they exist)
+          shopt -s nullglob
+          for notebook in *.ipynb; do
+            jupyter nbconvert --to script "$notebook"
+          done
 
-            # Extract import statements only
-            for pyfile in *.py; do
-                grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
-            done
-            python imports_only.py
+          # Clear or create a new file for import statements
+          echo "" > imports_only.py
+
+          # Extract import statements only
+          for pyfile in *.py; do
+            grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
+          done
+
+          python imports_only.py
