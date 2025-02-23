@@ -36,6 +36,5 @@ jobs:
         model: ${{ fromJson(needs.generate-matrix.outputs.models) }}
     uses: ./.github/workflows/check_import.yml
     with:
-      model: "Auto-sklearn"
+      model: ${{ matrix.model }}
       python_version: ${{ matrix.python_version }}
-      system_dependencies: git
