@@ -6,21 +6,16 @@ env:
   model: "Auto-sklearn"
 
 jobs:
-  test-python-versions:
+  check-import:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python_version: [3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12]  # ✅ Runs separate jobs in parallel
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4 
-
-      - name: Run `check_import.yml` workflow
-        uses: reproduce-matbench/.github/workflows/check_import.yml@main
-        with:
-          model: ${{ env.model }}
-          python_version: ${{ matrix.python_version }}
-          # system_dependencies: git
-          conda_env_file: benchmarks/matbench_v0.1_${{ env.model }}/environment.yml
+    uses: ./.github/workflows/check_import.yml
+    with:
+      model: ${{ env.model }}
+      python_version: ${{ matrix.python_version }}
+      system_dependencies: git
+      conda_env_file: benchmarks/matbench_v0.1_${{ env.model }}/environment.yml
