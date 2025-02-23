@@ -1,0 +1,41 @@
+name: Test Auto-sklearn Import
+
+on: [push, pull_request]
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      python_versions: ${{ steps.set-versions.outputs.python_versions }}
+      models: ${{ steps.get-folders.outputs.models }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+
+      - name: Get all the folder names in the benchmarks directory (remove the prefix "matbench_v0.1_" and the suffix '/' and enclose each folder name in single quotes) 
+        id: get-folders
+        run: |
+          cd benchmarks
+          models=$(ls -d matbench_v0.1_*/ | sed "s/matbench_v0.1_//g" | sed "s#/##g" | awk '{print "\x27"$0"\x27"}' | paste -sd "," -)
+          echo "models=[$models]" >> $GITHUB_OUTPUT  # Corrected output format
+    
+      - name: Define Python version list
+        id: set-versions
+        run: |
+          echo 'python_versions=["3.6","3.7","3.8","3.9","3.10","3.11","3.12"]' >> $GITHUB_OUTPUT
+
+
+  # Default env setup, by installing the package indicated in the requirements field in info.json
+  jobs:
+    name: "Test ${{ matrix.model }} on Python ${{ matrix.python_version }}"  
+    needs: generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
+        model: ${{ fromJson(needs.generate-matrix.outputs.models) }}
+    uses: ./.github/workflows/check_import.yml
+    with:
+      model: "Auto-sklearn"
+      python_version: ${{ matrix.python_version }}
+      system_dependencies: git

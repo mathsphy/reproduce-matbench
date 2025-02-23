@@ -14,6 +14,7 @@ jobs:
           echo "python_versions=['3.6','3.7','3.8','3.9','3.10','3.11','3.12']" >> $GITHUB_OUTPUT
 
 
+  # Default env setup, by installing the package indicated in the requirements field in info.json
   json-info:
     needs: generate-matrix
     strategy:
@@ -26,7 +27,7 @@ jobs:
       python_version: ${{ matrix.python_version }}
       system_dependencies: git
 
-
+  # Env setup using the conda environment file provided by the model developer
   conda-env-file:
     needs: generate-matrix
     strategy:
@@ -41,6 +42,7 @@ jobs:
       conda_env_file: benchmarks/matbench_v0.1_Auto-sklearn/environment.yml
 
 
+  # Env setup solution we find
   solution:
     needs: generate-matrix
     strategy:
