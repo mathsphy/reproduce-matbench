@@ -1,0 +1,72 @@
+name: matbench_v0.1_Auto-sklearn
+
+on:
+  push:
+  pull_request:
+
+env:
+  model: 'Auto-sklearn'
+  github_link: 'https://github.com/mathsphy/matbench.git'
+  python_version: '3.9'
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y git
+
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Set up Conda environment and execute imports
+        id: run0
+        continue-on-error: true
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda env create --name run0 --file benchmarks/matbench_v0.1_${{ env.model }}/environment.yml
+          conda activate run0
+
+          cd benchmarks/matbench_v0.1_${{ env.model }}
+
+          jupyter nbconvert --to script notebook.ipynb || { echo "Notebook conversion failed"; exit 1; }
+          
+          if [ -f "notebook.py" ]; then
+            grep -E "^(import|from .* import)" notebook.py > imports_only.py
+            python imports_only.py
+          else
+            echo "notebook.py not found, skipping import execution."
+            exit 1
+          fi
+
+      - name: Install matbench and retry if Notebook Execution Fails
+        if: steps.run0.outcome == 'failure'
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda activate run0
+
+          echo "Notebook execution failed, installing matbench..."
+          pip install matbench  
+
+          cd benchmarks/matbench_v0.1_${{ env.model }}
+          python imports_only.py
+
+      - name: Create a new Conda virtual environment
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda create -y --name solution python=${{ env.python_version }}
+
+      - name: Activate new Conda environment and install dependencies
+        run: |
+          eval "$(conda shell.bash hook)"
+          conda activate solution
+
+          pip install matbench swig==4.1.0 auto-sklearn==0.15.0 'numpy<2'
+          
+          python benchmarks/matbench_v0.1_${{ env.model }}/imports_only.py
