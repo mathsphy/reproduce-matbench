@@ -1,0 +1,61 @@
+name: DimeNetPP_kgcnn_v2.1.0
+
+on:
+  push:
+  pull_request:
+
+env:
+  model: 'DimeNetPP_kgcnn_v2.1.0'
+  github_link: 'https://github.com/mathsphy/matbench.git'
+  python_version: '3.9'
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y git
+
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Set up Conda environment and execute imports
+        id: run0
+        continue-on-error: true
+        run: |
+          cd benchmarks/matbench_v0.1_${{ env.model }}
+
+          # Define environment name
+          ENV_NAME="run0"
+
+          # Create a new Conda environment 
+          conda create -y --name $ENV_NAME python=${{ env.python_version }}
+
+          # Activate Conda environment
+          conda activate $ENV_NAME
+
+          # Extract and install required packages from JSON
+          PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
+          
+          # Install packages via pip
+          pip install $PACKAGES
+
+          # Check if *.ipynb exists
+          if [ -f "*.ipynb" ]; then
+            # Convert Jupyter notebook to Python script
+            jupyter nbconvert --to script *.ipynb 
+          fi 
+
+          # Only check importing
+          echo > imports_only.py
+          for i in *.py; do
+            grep -E "^(import|from .* import)" $i >> imports_only.py
+          done
+          python imports_only.py
+          
