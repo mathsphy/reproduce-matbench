@@ -1,4 +1,4 @@
-name: Test Auto-sklearn Import
+name: Check Single Model Env
 
 on: 
   push:

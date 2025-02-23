@@ -1,4 +1,4 @@
-name: Test Auto-sklearn Import
+name: Auto-sklearn
 
 on: [push, pull_request]
 
