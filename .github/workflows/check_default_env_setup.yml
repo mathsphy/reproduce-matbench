@@ -1,4 +1,4 @@
-name: Test Auto-sklearn Import
+name: Check Default Env 
 
 on: [push, pull_request]
 
