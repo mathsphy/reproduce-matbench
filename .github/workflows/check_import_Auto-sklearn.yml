@@ -52,6 +52,6 @@ jobs:
       model: "Auto-sklearn"
       python_version: ${{ matrix.python_version }}
       system_dependencies: git
-      custom_pip_lines: " pip install matbench swig==4.1.0 auto-sklearn==0.15.0 'numpy<2' "
+      custom_pip_lines: " pip install matbench swig==4.1.0 auto-sklearn==0.15.0 'numpy<2' jupyter"
 
       
