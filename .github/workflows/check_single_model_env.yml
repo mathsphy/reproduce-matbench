@@ -1,0 +1,47 @@
+name: Test Auto-sklearn Import
+
+on: 
+  push:
+    # Run only when this file is modified
+    paths:
+      - .github/workflows/check_single_model_env.yml
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      python_versions: ${{ steps.set-versions.outputs.python_versions }}
+    steps:
+      - name: Define Python version list
+        id: set-versions
+        run: |
+          echo "python_versions=['3.6','3.7','3.8','3.9','3.10','3.11','3.12']" >> $GITHUB_OUTPUT
+
+
+  # Default env setup, by installing the package indicated in the requirements field in info.json
+  json-info:
+    needs: generate-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
+    uses: ./.github/workflows/check_import.yml
+    with:
+      model: "DeeperGATGNN"
+      python_version: ${{ matrix.python_version }}
+      system_dependencies: git
+
+  # # Env setup using the conda environment file provided by the model developer
+  # conda-env-file:
+  #   needs: generate-matrix
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
+  #   uses: ./.github/workflows/check_import.yml
+  #   with:
+  #     model: "Auto-sklearn"
+  #     python_version: ${{ matrix.python_version }}
+  #     system_dependencies: git
+  #     conda_env_file: benchmarks/matbench_v0.1_Auto-sklearn/environment.yml
+
