@@ -1,4 +1,4 @@
-name: env-setup-and-import-check
+name: env-autofix-and-import-check
 
 on:
   workflow_call:
