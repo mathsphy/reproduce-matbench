@@ -17,6 +17,7 @@ jobs:
   setup-from-json-info-file:
     needs: generate-matrix
     strategy:
+      fail-fast: false
       matrix:
         python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
     uses: ./.github/workflows/check_import.yml
@@ -25,9 +26,11 @@ jobs:
       python_version: ${{ matrix.python_version }}
       system_dependencies: git
 
+
   setup-from-conda-env-file:
     needs: generate-matrix
     strategy:
+      fail-fast: false
       matrix:
         python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
     uses: ./.github/workflows/check_import.yml
@@ -37,9 +40,11 @@ jobs:
       system_dependencies: git
       conda_env_file: benchmarks/matbench_v0.1_Auto-sklearn/environment.yml
 
+
   solution-setup:
     needs: generate-matrix
     strategy:
+      fail-fast: false
       matrix:
         python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
     uses: ./.github/workflows/check_import.yml
@@ -48,3 +53,5 @@ jobs:
       python_version: ${{ matrix.python_version }}
       system_dependencies: git
       custom_pip_lines: " pip install matbench swig==4.1.0 auto-sklearn==0.15.0 'numpy<2' "
+
+      
