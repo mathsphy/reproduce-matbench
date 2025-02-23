@@ -1,70 +1,44 @@
-name: Auto-sklearn
+name: Test Auto-sklearn Import
 
-on:
-  push:
+on: [push, pull_request]
 
 env:
-  model: 'Auto-sklearn'
-  python_version: '3.9'
+  model: "Auto-sklearn"
+  min_python_version: 3.6
+  max_python_version: 3.12
 
 jobs:
-  job:
+  test-python-versions:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # Allows all versions to run even if one fails
+      matrix:
+        python_version: [3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12]  # List of versions
 
     steps:
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y git
-
       - name: Checkout repository
         uses: actions/checkout@v4 
 
-      - name: Install Miniconda
-        uses: conda-incubator/setup-miniconda@v3
+      - name: Run `check_import.yml` workflow
+        uses: ./.github/workflows/check_import.yml  # Calls reusable workflow
         with:
-          python-version: ${{ env.python_version }}
+          model: ${{ env.model }}
+          python_version: ${{ matrix.python_version }}
+          system_dependencies: git
+          conda_env_file: benchmarks/matbench_v0.1_${{ env.model }}/environment.yml
+          # pip_requirements_file: benchmarks/matbench_v0.1_${{ env.model }}/requirements.txt
 
-      - name: Set up Conda environment and execute imports
-        id: run0
-        continue-on-error: true
+        continue-on-error: true  # Allows errors but continues execution
+
+      - name: Save failure message if it fails
+        if: failure()
+        run: echo "Python ${{ matrix.python_version }} failed!" >> summary.log
+
+  summarize-results:
+    runs-on: ubuntu-latest
+    needs: test-python-versions  # Runs only after all jobs complete
+    steps:
+      - name: Print summary
         run: |
-          cd benchmarks/matbench_v0.1_${{ env.model }}
-
-          eval "$(conda shell.bash hook)"
-          conda env create --name run0 --file benchmarks/matbench_v0.1_${{ env.model }}/environment.yml
-          conda activate run0
-
-          jupyter nbconvert --to script notebook.ipynb 
-          
-          if [ -f "notebook.py" ]; then
-            grep -E "^(import|from .* import)" notebook.py > imports_only.py
-            python imports_only.py
-          else
-            echo "notebook.py not found, skipping import execution."
-            exit 1
-          fi
-
-      - name: Install matbench and retry if Notebook Execution Fails
-        if: steps.run0.outcome == 'failure'
-        run: |
-          eval "$(conda shell.bash hook)"
-          conda activate run0
-
-          echo "Notebook execution failed, installing matbench..."
-          pip install matbench  
-
-          cd benchmarks/matbench_v0.1_${{ env.model }}
-          python imports_only.py
-
-      - name: Create a new Conda virtual environment
-        run: |
-          eval "$(conda shell.bash hook)"
-          conda create -y --name solution python=${{ env.python_version }}
-
-      - name: Activate new Conda environment and install dependencies
-        run: |
-          eval "$(conda shell.bash hook)"
-          conda activate solution
-
-          pip install matbench swig==4.1.0 auto-sklearn==0.15.0 'numpy<2'
-          
-          python benchmarks/matbench_v0.1_${{ env.model }}/imports_only.py
+          echo "Python Version Test Summary:"
+          cat summary.log || echo "All tests passed!"

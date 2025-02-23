@@ -1,0 +1,101 @@
+name: Check Conda Environment Setup and Module Imports
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: "The model name"
+        required: true
+        type: string
+      python_version:
+        description: "Python version to use"
+        required: true
+        type: string
+      system_dependencies:
+        description: "Additional system dependencies to install"
+        required: false  
+        type: string
+        default: "git"
+      conda_env_file:
+        description: "Optional Conda environment YAML file for setup"
+        required: false
+        type: string
+      pip_requirements_file:
+        description: "Optional pip requirements.txt file for setup"
+        required: false
+        type: string
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install system dependencies
+        run: |
+          if [ ! -z "${{ inputs.system_dependencies }}" ]; then
+            echo "Installing additional dependencies: ${{ inputs.system_dependencies }}"
+            sudo apt-get update
+            sudo apt-get install -y ${{ inputs.system_dependencies }}
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Set up Conda environment
+        run: |
+          eval "$(conda shell.bash hook)"
+          cd benchmarks/matbench_v0.1_${{ inputs.model }}
+
+          # Create a new Conda environment with the appropriate setup
+          if [ ! -z "${{ inputs.conda_env_file }}" ] && [ -f "${{ inputs.conda_env_file }}" ]; then
+            echo "Setting up Conda environment from YAML file: ${{ inputs.conda_env_file }}"
+            conda env create --name ${{ inputs.model }} --file ${{ inputs.conda_env_file }}
+            echo "Conda environment created with ${{ inputs.conda_env_file }}. Exiting step..."
+            exit 0  
+          fi
+
+          conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
+
+          # Activate Conda environment
+          conda activate ${{ inputs.model }}
+
+          # Install dependencies from pip requirements if provided
+          if [ ! -z "${{ inputs.pip_requirements_file }}" ] && [ -f "${{ inputs.pip_requirements_file }}" ]; then
+            echo "Installing pip dependencies from file: ${{ inputs.pip_requirements_file }}"
+            pip install -r ${{ inputs.pip_requirements_file }}
+            
+            echo "Conda environment created with ${{ inputs.pip_requirements_file }}. Exiting step..."
+            exit 0  
+          else
+            # Extract and install required packages from info.json
+            PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
+            pip install $PACKAGES
+            echo "Conda environment created with info.json. Exiting step..."
+
+          fi
+
+      - name: Run the importing test
+        run: |
+          eval "$(conda shell.bash hook)"
+          cd benchmarks/matbench_v0.1_${{ inputs.model }}
+
+          # Activate Conda environment
+          conda activate ${{ inputs.model }}
+
+          # Convert Jupyter notebooks to Python scripts (if they exist, and jupyter should be installed in this case)
+          shopt -s nullglob
+          for notebook in *.ipynb; do
+            jupyter nbconvert --to script "$notebook"
+          done
+
+          # Extract import statements only
+          echo "" > imports_only.py 
+          for pyfile in *.py; do
+            grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
+          done
+          python imports_only.py
