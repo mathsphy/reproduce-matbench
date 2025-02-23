@@ -15,13 +15,17 @@ on:
         description: "Additional system dependencies to install"
         required: false  
         type: string
-        default: ""
+        default: "git"
       conda_env_file:
         description: "Optional Conda environment YAML file for setup"
         required: false
         type: string
       pip_requirements_file:
         description: "Optional pip requirements.txt file for setup"
+        required: false
+        type: string
+      custom_pip_lines:
+        description: "Optional custom pip install lines; each commands should be separated by semicolon"
         required: false
         type: string
 
@@ -62,7 +66,7 @@ jobs:
           conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
 
           # Activate Conda environment
-          conda activate ${{ inputs.model }}
+          conda activate ${{ inputs.model }} 
 
           # Install dependencies from pip requirements if provided
           if [ ! -z "${{ inputs.pip_requirements_file }}" ] && [ -f "${{ inputs.pip_requirements_file }}" ]; then
@@ -71,11 +75,19 @@ jobs:
             
             echo "Conda environment created with ${{ inputs.pip_requirements_file }}. Exiting step..."
             exit 0  
+
+          elif [ ! -z "${{ inputs.custom_requirements }}" ]; then
+            echo "Installing custom requirements: ${{ inputs.custom_requirements }}"
+            eval "${{ inputs.custom_requirements }}"
+            echo "Conda environment created with custom requirements. Exiting step..."
+            exit 0
+
           else
             # Extract and install required packages from info.json
             PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
             pip install $PACKAGES
             echo "Conda environment created with info.json. Exiting step..."
+
           fi
 
       - name: Run the importing test
