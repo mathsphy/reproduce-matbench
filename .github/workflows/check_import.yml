@@ -76,9 +76,9 @@ jobs:
             echo "Conda environment created with ${{ inputs.pip_requirements_file }}. Exiting step..."
             exit 0  
 
-          elif [ ! -z "${{ inputs.custom_requirements }}" ]; then
-            echo "Installing custom requirements: ${{ inputs.custom_requirements }}"
-            eval "${{ inputs.custom_requirements }}"
+          elif [ ! -z "${{ inputs.custom_pip_lines }}" ]; then
+            echo "Installing custom requirements: ${{ inputs.custom_pip_lines }}"
+            eval "${{ inputs.custom_pip_lines }}"
             echo "Conda environment created with custom requirements. Exiting step..."
             exit 0
 
