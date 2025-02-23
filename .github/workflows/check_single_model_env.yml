@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
-    uses: ./.github/workflows/check_import.yml
+    uses: ./.github/workflows/env-setup-and-import-check.yml
     with:
       model: "DeeperGATGNN"
       python_version: ${{ matrix.python_version }}

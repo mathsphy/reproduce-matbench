@@ -38,7 +38,7 @@ jobs:
       matrix:
         python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
         model: ${{ fromJson(needs.generate-matrix.outputs.models) }}
-    uses: ./.github/workflows/check_import.yml
+    uses: ./.github/workflows/env-setup-and-import-check.yml
     with:
       model: ${{ matrix.model }}
       python_version: ${{ matrix.python_version }}

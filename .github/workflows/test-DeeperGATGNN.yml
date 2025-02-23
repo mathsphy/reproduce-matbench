@@ -2,7 +2,9 @@ name: DeeperGATGNN
 
 on:
   push:
-  pull_request:
+    # Run only when this file is modified
+    paths:
+      - .github/workflows/test-DeeperGATGNN.yml
 
 env:
   model: 'DeeperGATGNN'
@@ -27,12 +29,13 @@ jobs:
 
       - name: Set up Conda environment and execute imports
         id: run0
-        continue-on-error: true
         run: |
           cd benchmarks/matbench_v0.1_${{ env.model }}
 
           # Define environment name
           ENV_NAME="run0"
+          
+          eval "$(conda shell.bash hook)"
 
           # Create a new Conda environment 
           conda create -y --name $ENV_NAME python=${{ env.python_version }}

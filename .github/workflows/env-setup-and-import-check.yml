@@ -1,4 +1,4 @@
-name: Check Conda Environment Setup and Module Imports
+name: env-setup-and-import-check
 
 on:
   workflow_call:
