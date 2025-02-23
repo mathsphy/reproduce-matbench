@@ -15,7 +15,7 @@ on:
         description: "Additional system dependencies to install"
         required: false  
         type: string
-        default: "git"
+        default: ""
       conda_env_file:
         description: "Optional Conda environment YAML file for setup"
         required: false
@@ -76,7 +76,6 @@ jobs:
             PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
             pip install $PACKAGES
             echo "Conda environment created with info.json. Exiting step..."
-
           fi
 
       - name: Run the importing test
