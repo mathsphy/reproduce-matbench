@@ -1,10 +1,11 @@
-name: Auto-sklearn
+name: test Auto-sklearn
 
 on: 
   push:
     # Run only when this file is modified
     paths:
       - .github/workflows/test-Auto-sklearn.yml
+      - .github/workflows/env-setup-and-import-check.yml
 
 jobs:
   generate-matrix:

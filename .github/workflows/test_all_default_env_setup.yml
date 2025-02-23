@@ -2,9 +2,10 @@ name: Check Default Env
 
 on: 
   push:
-    # Run only when this file is modified
+    # Run only when these files are modified
     paths:
       - .github/workflows/check_default_env_setup.yml
+      - .github/workflows/env-setup-and-import-check.yml
 
 jobs:
   generate-matrix:

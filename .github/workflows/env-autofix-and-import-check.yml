@@ -1,0 +1,63 @@
+name: env-setup-and-import-check
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: "The model name"
+        required: true
+        type: string
+      python_version:
+        description: "Python version to use"
+        required: true
+        type: string
+
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Set up Conda environment
+        run: |
+            eval "$(conda shell.bash hook)"
+            cd benchmarks/matbench_v0.1_${{ inputs.model }}
+
+            conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
+
+            # Activate Conda environment
+            conda activate ${{ inputs.model }} 
+
+            # Extract and install required packages from info.json
+            PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
+            pip install $PACKAGES
+            echo "Conda environment created with info.json. Exiting step..."
+
+      - name: Run the importing test
+        run: |
+            eval "$(conda shell.bash hook)"
+            cd benchmarks/matbench_v0.1_${{ inputs.model }}
+
+            # Activate Conda environment
+            conda activate ${{ inputs.model }}
+
+            # Convert Jupyter notebooks to Python scripts (if they exist, and jupyter should be installed in this case)
+            shopt -s nullglob
+            for notebook in *.ipynb; do
+                jupyter nbconvert --to script "$notebook"
+            done
+
+            # Extract import statements only
+            for pyfile in *.py; do
+                grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
+            done
+            python imports_only.py

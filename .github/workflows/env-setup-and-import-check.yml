@@ -52,60 +52,60 @@ jobs:
 
       - name: Set up Conda environment
         run: |
-          eval "$(conda shell.bash hook)"
-          cd benchmarks/matbench_v0.1_${{ inputs.model }}
+            eval "$(conda shell.bash hook)"
+            cd benchmarks/matbench_v0.1_${{ inputs.model }}
 
-          # Create a new Conda environment with the appropriate setup
-          if [ ! -z "${{ inputs.conda_env_file }}" ] && [ -f "${{ inputs.conda_env_file }}" ]; then
-            echo "Setting up Conda environment from YAML file: ${{ inputs.conda_env_file }}"
-            conda env create --name ${{ inputs.model }} --file ${{ inputs.conda_env_file }}
-            echo "Conda environment created with ${{ inputs.conda_env_file }}. Exiting step..."
-            exit 0  
-          fi
+            # Create a new Conda environment with the appropriate setup
+            if [ ! -z "${{ inputs.conda_env_file }}" ] && [ -f "${{ inputs.conda_env_file }}" ]; then
+              echo "Setting up Conda environment from YAML file: ${{ inputs.conda_env_file }}"
+              conda env create --name ${{ inputs.model }} --file ${{ inputs.conda_env_file }}
+              echo "Conda environment created with ${{ inputs.conda_env_file }}. Exiting step..."
+              exit 0  
+            fi
 
-          conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
+            conda create -y --name ${{ inputs.model }} python=${{ inputs.python_version }}
 
-          # Activate Conda environment
-          conda activate ${{ inputs.model }} 
+            # Activate Conda environment
+            conda activate ${{ inputs.model }} 
 
-          # Install dependencies from pip requirements if provided
-          if [ ! -z "${{ inputs.pip_requirements_file }}" ] && [ -f "${{ inputs.pip_requirements_file }}" ]; then
-            echo "Installing pip dependencies from file: ${{ inputs.pip_requirements_file }}"
-            pip install -r ${{ inputs.pip_requirements_file }}
-            
-            echo "Conda environment created with ${{ inputs.pip_requirements_file }}. Exiting step..."
-            exit 0  
+            # Install dependencies from pip requirements if provided
+            if [ ! -z "${{ inputs.pip_requirements_file }}" ] && [ -f "${{ inputs.pip_requirements_file }}" ]; then
+              echo "Installing pip dependencies from file: ${{ inputs.pip_requirements_file }}"
+              pip install -r ${{ inputs.pip_requirements_file }}
+              
+              echo "Conda environment created with ${{ inputs.pip_requirements_file }}. Exiting step..."
+              exit 0  
 
-          elif [ ! -z "${{ inputs.custom_pip_lines }}" ]; then
-            echo "Installing custom requirements: ${{ inputs.custom_pip_lines }}"
-            eval "${{ inputs.custom_pip_lines }}"
-            echo "Conda environment created with custom requirements. Exiting step..."
-            exit 0
+            elif [ ! -z "${{ inputs.custom_pip_lines }}" ]; then
+              echo "Installing custom requirements: ${{ inputs.custom_pip_lines }}"
+              eval "${{ inputs.custom_pip_lines }}"
+              echo "Conda environment created with custom requirements. Exiting step..."
+              exit 0
 
-          else
-            # Extract and install required packages from info.json
-            PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
-            pip install $PACKAGES
-            echo "Conda environment created with info.json. Exiting step..."
+            else
+              # Extract and install required packages from info.json
+              PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
+              pip install $PACKAGES
+              echo "Conda environment created with info.json. Exiting step..."
 
-          fi
+            fi
 
       - name: Run the importing test
         run: |
-          eval "$(conda shell.bash hook)"
-          cd benchmarks/matbench_v0.1_${{ inputs.model }}
+            eval "$(conda shell.bash hook)"
+            cd benchmarks/matbench_v0.1_${{ inputs.model }}
 
-          # Activate Conda environment
-          conda activate ${{ inputs.model }}
+            # Activate Conda environment
+            conda activate ${{ inputs.model }}
 
-          # Convert Jupyter notebooks to Python scripts (if they exist, and jupyter should be installed in this case)
-          shopt -s nullglob
-          for notebook in *.ipynb; do
-            jupyter nbconvert --to script "$notebook"
-          done
+            # Convert Jupyter notebooks to Python scripts (if they exist, and jupyter should be installed in this case)
+            shopt -s nullglob
+            for notebook in *.ipynb; do
+              jupyter nbconvert --to script "$notebook"
+            done
 
-          # Extract import statements only
-          for pyfile in *.py; do
-            grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
-          done
-          python imports_only.py
+            # Extract import statements only
+            for pyfile in *.py; do
+              grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
+            done
+            python imports_only.py
