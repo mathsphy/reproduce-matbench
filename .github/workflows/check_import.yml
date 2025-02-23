@@ -105,7 +105,6 @@ jobs:
           done
 
           # Extract import statements only
-          echo "" > imports_only.py 
           for pyfile in *.py; do
             grep -E "^(import|from .* import)" "$pyfile" >> imports_only.py
           done
