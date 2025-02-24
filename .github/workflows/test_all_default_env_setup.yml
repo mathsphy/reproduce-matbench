@@ -32,13 +32,14 @@ jobs:
 
   # Default env setup, by installing the package indicated in the requirements field in info.json
   default-env-setup:
-    name: "Default env for: ${{ matrix.model }} on ${{ matrix.python_version }}"  
+    name: "Default env for: ${{ matrix.model }} on ${{ matrix.python_version }} with ${{ matrix.python_package_installer }}"  
     needs: generate-matrix
     strategy:
       fail-fast: false
       matrix:
         python_version: ${{ fromJson(needs.generate-matrix.outputs.python_versions) }}
         model: ${{ fromJson(needs.generate-matrix.outputs.models) }}
+        python_package_installer: ['pip', 'conda']
     uses: ./.github/workflows/env-setup-and-import-check.yml
     with:
       model: ${{ matrix.model }}

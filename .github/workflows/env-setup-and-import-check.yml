@@ -11,11 +11,11 @@ on:
         description: "Python version to use"
         required: true
         type: string
-      python_package_installer:
-        description: "Python package installer to use"
-        required: false
-        type: string
-        default: "pip"
+      # python_package_installer:
+      #   description: "Python package installer to use"
+      #   required: false
+      #   type: string
+      #   default: "pip"
       system_dependencies:
         description: "Additional system dependencies to install"
         required: false  
@@ -90,7 +90,8 @@ jobs:
             else
               # Extract and install required packages from info.json
               PACKAGES=$(python -c "import json; print(' '.join(json.load(open('info.json'))['requirements']['python']))")
-              ${{ inputs.python_package_installer }} install $PACKAGES
+              PACKAGES_CONDA=${PACKAGES//==/=}
+              pip install $PACKAGES || conda install $PACKAGES_CONDA -y
               echo "Conda environment created with info.json. Exiting step..."
 
             fi
